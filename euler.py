@@ -12,17 +12,21 @@ class Link:
     def __init__(self, point, position):
         self.point = point
         self.position = position
-pud = [Transistor('A', [('P2', 'Vdd')]),
-       Transistor('D', [('P1', 'Vdd')]),
-       Transistor('E', [('P2', 'P1')]),
-       Transistor('B', [('Out', 'P2')]),
-       Transistor('C', [('Out', 'P2')])]
+pud = [
+    Transistor('A', ('P1', 'Vdd')),
+    Transistor('B', ('P1', 'Vdd')),
+    Transistor('E', ('P2', 'P1')),
+    Transistor('D', ('Out', 'P2')),
+    Transistor('C', ('Out', 'P2'))
+]
 
-pdn = [Transistor('A', [('Out', 'P3')]),
-       Transistor('D', [('P3', 'Vss')]),
-       Transistor('E', [('P3', 'Vss')]),
-       Transistor('B', [('Out', 'P4')]),
-       Transistor('C', [('P4', 'Vss')])]
+pdn = [
+    Transistor('A', ('Out', 'P3')),
+    Transistor('B', ('P3', 'Vss')),
+    Transistor('E', ('Out', 'Vss')),
+    Transistor('D', ('Out', 'P4')),
+    Transistor('C', ('P4', 'Vss'))
+]
 def points(pud, pdn): #xác định các vị trí VDD, GND, VOUT
     ids = [transistor.id for transistor in pud]
     #lấy danh sách các POINTS của đỉnh
@@ -111,8 +115,16 @@ def list_swap(lst, n1, n2):
     return lst
 #trích xuất các ĐIỂM KẾT NỐI duy nhất trong pud và pdn
 def nodes(pud, pdn):
-    nodes_pud = list(set([item for transistor in pud for points in transistor.points for item in points]))
-    nodes_pdn = list(set([item for transistor in pdn for points in transistor.points for item in points]))
+    nodes_pud = []
+    for transistor in pud:
+        for points in transistor.points:
+            nodes_pud.append(points)
+    nodes_pud = list(set(nodes_pud))
+    nodes_pdn = []
+    for transistor in pdn:
+        for points in transistor.points:
+            nodes_pdn.append(points)
+    nodes_pdn = list(set(nodes_pdn))
     #print("nodes_pud", nodes_pud)
     #print("nodes_pdn", nodes_pdn)
     return nodes_pud, nodes_pdn
@@ -143,11 +155,11 @@ def next_vertex(g, x): #next_vertex(pud, start_ele)
         if i:
             id = i.id 
             e = i.points
-            #print("e", e[0][0])
-            if e[0][0] == x:
-                acc.append((id, e[0]))
+            #print("e", x)
+            if e[0] == x:
+                acc.append((id, e[1]))
                 
-            elif e[0][1] == x:
+            elif e[1] == x:
                 acc.append((id, e[0]))
     return acc
 def reach(graph, x):
@@ -186,37 +198,37 @@ def path_start(pud, pdn):
     pud_point = [a for a in pud]
     #Chứa các điểm kết nối trong pud
     vertices_pud = list(set([item for transistor in pud for item in transistor.points]))
-    print("start", vertices_pud)
-    pdn_point = [a for a in pud]
+    #print("start", vertices_pud)
+    pdn_point = [a for a in pdn]
     #Chứa các điểm kết nối trong pdn
     vertices_pdn = list(set([item for transistor in pdn for item in transistor.points]))
-    
+    #print("pdn", vertices_pdn)
     start_ele_pud = None
     start_ele_pdn = None
 
     for vertex in vertices_pud:
-        #print("start", vertex[0], vertex[1])
-        deg = sum(1 for transistor in pud for point1, point2 in transistor.points if point1 == vertex[0] or point2 == vertex[0])
+        #print("start", vertex)
+        deg = sum(1 for transistor in pud for point in transistor.points if point == vertex)
         #print("end", deg)
         #Tìm điểm kết nối có bậc lẻ ở pud
         if deg % 2 != 0:
-            start_ele_pud = vertex[0]
+            start_ele_pud = vertex
             #print("oke", start_ele_pud)         
             break
     for vertex in vertices_pdn:
-        #print("start", vertex[0], vertex[1])
-        deg = sum(1 for transistor in pdn for point1, point2 in transistor.points if point1 == vertex[0] or point2 == vertex[0])
+        #print("start", vertex)
+        deg = sum(1 for transistor in pdn for point in transistor.points if point == vertex)
         #print("end", deg)
         #Tìm điểm kết nối có bậc lẻ ở pud
         if deg % 2 != 0:
-            start_ele_pdn = vertex[0]
-            #print("oke", start_ele_pdn)         
+            start_ele_pdn = vertex
             break
     if start_ele_pud:
-        #Trả về điểm kết nối bậc lẻ của pud
+        #print("oke", start_ele_pud) 
         return (start_ele_pud, True)
     elif start_ele_pdn:
         #Trả về điểm kết nối bậc lẻ của pdn
+        #print("oke", start_ele_pdn)
         return (start_ele_pdn, False)
     else:
         return (Vdd, True)
@@ -224,26 +236,32 @@ def path_start(pud, pdn):
 def euler_path(pud, pdn):
     #Đỉnh bậc lẻ và cờ (xem nó thuộc pud hay pdn)
     start_ele, pud_flag = path_start(pud, pdn)
-    print("start_ele", start_ele)
+    
     #Lấy các điểm kết nối của pud và pdn
     nodes_pud, nodes_pdn = nodes(pud, pdn)
-    
+    #print("end", nodes_pud[0])
     if pud_flag:
+        #print("start_ele", start_ele)
+        #print("pdn", nodes_pdn[0])
         path1, edge1 = any_path(pud, start_ele)
-        #print("end", path1)
         path2, edge2 = any_path(pdn, nodes_pdn[0])
     else:
         path1, edge1 = any_path(pud, nodes_pud[0])
+        #print("start_ele", start_ele)
         path2, edge2 = any_path(pdn, start_ele)
+        
     
     return path1, edge1, path2, edge2
 
 def any_path(g, vertex): #any_path(pud, start_ele)
     #tìm đường đi tiếp theo cho start_ele
+    #print('vertex', vertex)
     next_vertices = next_vertex(g, vertex) #next_vertex trả về cạnh nối với start_ele
+    
     if not next_vertices:
         return [], []
     next_ele = 0
+    #print(next_vertices)
     #Nếu chỉ có 1 cạnh để đi tiếp => chọn cạnh đó
     if len(set([item for sublist in map(lambda x: x[1], next_vertices) for item in sublist])) <= 1:
         #print("chi co 1 canh")
@@ -252,26 +270,26 @@ def any_path(g, vertex): #any_path(pud, start_ele)
         #print("nhieu hon 1 canh")
         #i là chỉ số, a là phẩn tử tương ứng với chỉ số
         for i, a in enumerate(next_vertices):
-            #print(a[0])
-            #print([vertex] + [a[1][0]])
-            #print(vertex)
-            #result = remove_edge(a[0], [vertex] + [a[1][0]], g)
+            #print('a0', a[0])
+            #print([vertex] + [a[1]])
+            #print('vertex',vertex)
+            result = remove_edge(a[0], ([vertex] + [a[1]]), g)
             #for transistor in result:
-                #print(f"Transistor ID: {transistor.id}, Points: {transistor.points[0]}")
+                #print(f"Transistor ID: {transistor.id}, Points: {transistor.points}")
             #reach: khoảng cách từ điểm bắt đầu đến các đỉnh khác trong đồ thị - số lượng đỉnh từ điểm bắt đầu
             #reach(remove_edge): Sau khi loại bỏ cạnh
-            #print("reach", reach(remove_edge(a[0], [vertex] + [a[1][0]], g), vertex))
+            #print("reach", reach(remove_edge(a[0], [vertex] + [a[1]], g), vertex))
             #print((reach(g, vertex)))
             
             #Chọn đỉnh có số lượng đỉnh ít nhất
-            if all(reach(g, vertex) <= reach(remove_edge(a[0], [vertex] + [a[1][0]], g), vertex) for _ in range(i + 1)):
+            if all(reach(g, vertex) <= reach(remove_edge(a[0], [vertex] + [a[1]], g), vertex) for _ in range(i + 1)):
                 next_ele = i
                 break
     stack = next_vertices[next_ele]
     #print('stack', stack)
     id_ = stack[0]
     #print('id_', id_)
-    p2 = stack[1][0]
+    p2 = stack[1]
     #print('points', p2)
     result = remove_edge(id_, [vertex] + [p2], g)
     #for transistor in result:
@@ -286,30 +304,38 @@ def any_path(g, vertex): #any_path(pud, start_ele)
 def remove_edge(id, points, g): #(tên đỉnh, điểm kết nối, pud/pdn) (A, 'P1, P2', pud)
     g_new = remove_edge_2(id, points, g)  # Gọi hàm remove_edge_2 để loại bỏ cạnh từ đồ thị g   
     return remove_edge_2(id, reverse_pair(points), g_new)  # Áp dụng hàm remove_edge_2 lần nữa sau khi đảo ngược cặp points
-def remove_edge_2(id_, points_, g):
+def remove_edge_2(id_, points, g):
     result = []
+    result_done = []
     for a in g:
-        if a.id != id_:
-            if a.points[0] != points_:
-                result.append(a)
-    return result
+        if a.id != id_ :
+            result.append(a)
+    for b in result:
+        s = [b.points[0]] + [b.points[1]]
+        if (s != points):
+            result_done.append(b)
+    return result_done
 def reverse_pair(points):
     if isinstance(points, tuple):  # Kiểm tra xem points có phải là một cặp không
         return (points[1], points[0])  
 # Testing the function
-pud = [Transistor('A', [('P2', 'Vdd')]),
-       Transistor('D', [('P1', 'Vdd')]),
-       Transistor('E', [('P2', 'P1')]),
-       Transistor('B', [('Out', 'P2')]),
-       Transistor('C', [('Out', 'P2')])]
+pud = [
+    Transistor('A', ('P1', 'Vdd')),
+    Transistor('B', ('P1', 'Vdd')),
+    Transistor('E', ('P2', 'P1')),
+    Transistor('D', ('Out', 'P2')),
+    Transistor('C', ('Out', 'P2'))
+]
 
-pdn = [Transistor('A', [('Out', 'P3')]),
-       Transistor('D', [('P3', 'Vss')]),
-       Transistor('E', [('P3', 'Vss')]),
-       Transistor('B', [('Out', 'P4')]),
-       Transistor('C', [('P4', 'Vss')])]
+pdn = [
+    Transistor('A', ('Out', 'P3')),
+    Transistor('B', ('P3', 'Vss')),
+    Transistor('E', ('Out', 'Vss')),
+    Transistor('D', ('Out', 'P4')),
+    Transistor('C', ('P4', 'Vss'))
+]
 
-pud_result, pdn_result = points(pud, pdn)
+#pud_result, pdn_result = points(pud, pdn)
 #nodes_pud, nodes_pdn = nodes(pud, pdn)
 #a, b = path_start(pud, pdn)
 #print("S", a)
