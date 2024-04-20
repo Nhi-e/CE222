@@ -1,4 +1,6 @@
 import math
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 ordem = ('S', 'D')
 Vdd = 'Vdd'
 Vss = 'Vss'
@@ -317,7 +319,242 @@ def remove_edge_2(id_, points, g):
     return result_done
 def reverse_pair(points):
     if isinstance(points, tuple):  # Kiểm tra xem points có phải là một cặp không
-        return (points[1], points[0])  
+        return (points[1], points[0]) 
+class SizeWindow:
+    def __init__(self, col, lin):
+        self.col = col
+        self.lin = lin
+
+class line:
+    def __init__(self, x0, y0, x1, y1, color):
+        self.x0 = x0
+        self.y0 = y0
+        self.x1 = x1
+        self.y1 = y1
+        self.color = color
+
+size_janela = SizeWindow(600, 800) 
+
+def polarity(pud, pdn):
+    path1, edge1, path2, edge2 = euler_path(pud, pdn)
+
+    polarity_pud = polarity_euler(path1, pud) # path 1 
+    polarity_pdn = polarity_euler(path2, pdn) # path 2
+
+    return polarity_pud, polarity_pdn
+
+# hàm xác định thứ tự các cực (S và D) của một transitor 
+def polarity_euler(euler1, g):
+    polarity_list = []
+    for transistor in euler1:
+        id, pola = transistor
+        pola = sorted(pola)   # su dung ham nay de tu dong sap xep cac phan tu trong mang ma khong can quan tam vi tri
+        # Tim id cua transistor co trong do thi
+        transistor =  filter_transistor(id, g)
+        pola_g = sorted(transistor.points) 
+
+        if pola == pola_g:
+            polarity_list.append([id, ordem])
+
+        else:
+            polarity_list.append([id, [ordem[1], ordem[0]]])
+    return polarity_list
+
+def line_hor(pud, pdn):
+    points_pud, points_pdn = points(pud, pdn)
+    line_pud = len(points_pud)
+    
+    line_pdn = len(points_pdn)
+    y2 = 0.3 * size_janela.col / line_pud
+    y3 = 0.3 * size_janela.col / line_pdn
+    x0 = 0
+    x1 = size_janela.lin
+    
+    lines = []
+    for i, a in enumerate(points_pud):
+        id = a[0]
+        
+        if "Vdd" in id or "Out" in id:
+            color = "blue"
+        else:
+            color = "yellow"
+        lines.append([id, line(x0, i * y2, x1, i * y2, color)])
+        #print(a[0], color)
+    for i, a in enumerate(points_pdn):
+        id = a[0]
+        if "Vss" in id or "Out" in id:
+            color = "blue"
+        else:
+            color = "green"
+        lines.append([id, line(x0, size_janela.col - i * y3, x1, size_janela.col - i * y3, color)])
+    return lines
+
+def find_polarity (id , polarity):
+    for i in polarity:
+        id_temp , polarity_temp = i
+        if id == id_temp :
+            return  polarity_temp
+    return []
+
+def line_ver(pud, pdn): #tạo các đường thẳng dọc
+    path1, edge1, path2, edge2 = euler_path(pud, pdn)
+    #print(edge1, path1)
+    
+    #Phân cực S và D
+    polarity_pud, polarity_pdn = polarity(pud, pdn)
+    
+    qnt_con = len(edge1)
+    #Tìm các cạnh giống nhau, thường rỗng
+    equal = equal_pos(edge1, edge2)
+    x = 0.8 * size_janela.lin / qnt_con
+    y0 = 0.15 * size_janela.col
+    y1 = 0.4 * size_janela.col
+    y2 = 0.6 * size_janela.col
+    y3 = 0.85 * size_janela.col
+
+    lines_pud = []
+    lines_pdn = []
+
+    for i, id in enumerate(edge1):
+        if assc(id, equal): # dieu kien kiem tra xem co transistor nao giong nhau o pud va pdn khong           
+            lines_pud.append([id, find_polarity(id,polarity_pud), line(i * x, y0, i * x, y1, "red")])
+    for i, id in enumerate(edge1):
+        if assc(id, equal):
+            lines_pdn.append([id, find_polarity(id,polarity_pud), line(i * x, y2, i * x, y3, "red")])
+
+    return lines_pud, lines_pdn
+
+def equal_pos(edge1, edge2): #tìm đỉnh chung của euler path pud và pdn
+    result = []
+    #i và j là chỉ số của id
+    for i, id1 in enumerate(edge1):
+        #print(i)
+        for j, id2 in enumerate(edge2):
+            if id1 == id2:
+                result.append([id1, j])
+                break
+    return result
+
+def assc(A, lista):
+    for sublist in lista:
+        if A in sublist:
+            return True
+    return False
+
+def line_vout():
+    #trả về đường thẳng có tên "Vout", tọa độ x0, y0, x1, y1 và color
+    return [["Vout", line(0, 0.5 * size_janela.col, size_janela.lin, 0.5 * size_janela.col, "blue")]] 
+def line_vout_ver2():
+    return [line(0, 0.5 * size_janela.col, size_janela.lin, 0.5 * size_janela.col, "blue")]
+fig, ax = plt.subplots()
+
+def draw_stick_basic(pud, pdn):
+    line_pud= line_hor(pud, pdn) #lines
+    #print(line_pud)
+    # points_pud, points_pdn = points(pud, pdn) #transistor 
+    
+    euler1, euler2, euler3, euler4 = euler_path(pud, pdn) #euler
+    line_id_pud, line_id_pdn = line_ver(pud, pdn) #line
+    #print(line_id_pud)
+    #line_out = line_vout() #lines
+    line_out_ver2 = line_vout_ver2() #lines
+    qnt_con = len(euler2)
+    #print(qnt_con)
+    eq = equal_pos(euler2, euler4) #euler
+    #print('eq',eq)
+    #x = 0.8 * (size_janela.lin) / (2 * qnt_con)
+    #vout_p_value = next((item[1] for item in line_pud if item[0] == 'Vout'), None)
+    # # y_p_type = line.y0(vout_p_value)
+    # # vout_n_value = next((item[1] for item in line_pdn if item[0] == 'Vout'), None)
+    # # y_n_type = line.y0(vout_n_value)
+    # #y_p_type = line.y0([item[1] for item in line_pud if item[0] == Vout][0]) #lines/transistor
+    # #y_n_type = line.y0([item[1] for item in line_pdn if item[0] == Vout][0]) #lines/transistor
+
+    draw_id(line_id_pud, eq, True)
+    draw_id(line_id_pdn, eq, False)
+
+    # # draw_other_id(line_pud, euler2, points_pud, line_id_pud, x, y_p_type)
+    # # draw_other_id(line_pdn, euler4, points_pdn, line_id_pdn, x, y_n_type, False)
+    
+    for i in line_out_ver2:
+        if isinstance(i, line): #lines
+            x0 = i.x0
+            y0 = i.y0
+            x1 = i.x1
+            y1 = i.y1
+            color = i.color
+            plt.plot([x0, y0], [x1, y1], color=color, linewidth=2)
+            plt.text(0.95 * x1, y1, 'Vout', color='black')
+    
+def draw_id(line_id, eq, top):
+    #line_id: danh sách các đoạn cần vẽ
+    for i in line_id:
+        #print(i)
+        if isinstance (i, list):
+            #print("ab" , i[2].x0)
+            id = i[0]
+            x0 = i[2].x0
+            y0 = i[2].y0
+            x1 = i[2].x1
+            y1 = i[2].y1
+            color = i[2].color
+            #line(x0, y0, x1, y1, color) = id[1]
+            #id, _,  = i
+            plt.plot([x0, y0], [x1, y1], color='red', linewidth=3)
+            if top or id not in eq:
+                plt.text(x0, y0 if top else y1, str(id), color=color)
+    plt.show()
+def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
+    for a, b in zip(line_pud, range(len(line_pud))):
+        id, line = a
+        x0, y0, x1, y1, color = line
+        if id in [Vdd, Vss, Vout]:
+            plt.plot([x0, x1], [y0, y1], color=color, linewidth=3, linestyle='-')
+    
+        nos = [i for i in points_pud if i.link_point == id and i.link_position]
+        if len(nos) == 2:
+            node1, node1_p = nos[0]
+            node2, node2_p = nos[1]
+            index_node1 = euler2.index(node1)
+            index_node2 = euler2.index(node2)
+            line1 = line_id[node1]
+            line2 = line_id[node2]
+            x1, y01, _, y11, _ = line1
+            x2, y02, _, y12, _ = line2
+            if (not seguido(index_node1, index_node2) or (seguido(index_node1, index_node2) and not ligado(line1, node1_p, line2, node2_p, index_node1, index_node2)) or id == Vdd or id == Vss):
+                plt.plot([x1, x1, x2, x2], [y_p_type, line.y0(line_pud[id][1]), line.y0(line_pud[id][1]), y_p_type], color=color, linewidth=2, linestyle='-')
+                plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
+                plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
+    
+        if id == Vout:
+            nos = [i for i in points_pud if i.link_point == id and i.link_position]
+            for j in nos:
+                node, node_p = j
+                line = line_id[node]
+                x1, y01, _, y11, _ = line
+                plt.plot([x1, x1], [y_p_type, 0.5 * SizeWindow(size_janela)], color='blue', linewidth=2, linestyle='-')
+                plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
+def seguido(index_node1, index_node2):
+    return (index_node1 + 1 == index_node2) or (index_node1 - 1 == index_node2)
+def ligado(pol, node1_p, pol2, node2_p, index_node1, index_node2):
+    if index_node1 < index_node2:
+        return (index_of(pol, node1_p) == 1) and (index_of(pol2, node2_p) == 0)
+    else:
+        return (index_of(pol, node1_p) == 0) and (index_of(pol2, node2_p) == 1)
+def index_of(l, x):
+    if isinstance(l, list):
+        for i, y in enumerate(l):
+            if x == y:
+                return i
+        return None
+    elif isinstance(l, tuple) or isinstance(l, str):
+        return 0 if l == x else 1
+    else:
+        return None
+    return draw_stick_basic
+
+
+#plt.savefig('stick_diagram.png')
 # Testing the function
 pud = [
     Transistor('A', ('P1', 'Vdd')),
@@ -340,11 +577,20 @@ pdn = [
 #a, b = path_start(pud, pdn)
 #print("S", a)
 path1, edge1, path2, edge2 = euler_path(pud, pdn)
-print('canh pud', path1)
-print('dinh pud', edge1)
-print('canh pdn', path2)
-print('dinh pdn', edge2)
+#print('canh pud', path1)
+#print('dinh pud', edge1)
+#print('canh pdn', path2)
+#print('dinh pdn', edge2)
+#line_pud, line_pdn = line_ver(pud, pdn)
+#print(line_pud)
+#print(line_pdn)
+#plt.show(draw_stick_basic(pud,pdn))
+
+draw_stick_basic(pud, pdn)
+#result = equal_pos(edge1, edge2)
+#print(result)
 #start_ele_test = ('P3')
+
 #next_vertices = [('A', 'Out'), ('D', 'Vss'), ('E', 'Vss')]
 #next_test = next_vertex(pdn, start_ele_test)
 #print("canh noi voi P3", next_test)
