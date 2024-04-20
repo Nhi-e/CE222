@@ -135,42 +135,58 @@ Out = 'Out'
 
 def next_step(graph, point):
         return [(edge, vertex) for edge, vertex in graph if edge == point]
-
-def remove_edge(edge, vertices, graph):
-        return [(e, v) for e, v in graph if (e, v) != edge and v not in vertices]
+def next_vertex(g, x): #next_vertex(pud, start_ele)
+    # Tìm đỉnh kế tiếp nối với start_ele => trả về cạnh đó
+    acc = []
+    for i in g:
+        #print("i", i[0])
+        if i:
+            id = i.id 
+            e = i.points
+            #print("e", e[0][0])
+            if e[0][0] == x:
+                acc.append((id, e[0]))
+                
+            elif e[0][1] == x:
+                acc.append((id, e[0]))
+    return acc
 def reach(graph, x):
+    #số lượng các đỉnh có thể đạt được tử đỉnh x
     visited = [x]
-    
+    next_vertex = []
     def loop(g, next_point):
         nonlocal visited
-        next_vertices = next_vertex(g, next_point)
-        
+        next_vertices = [] #trả về các cạnh nối với điểm next_point
+        for i in g:
+            if i:
+                id = i.id 
+                e = i.points
+                #print("e", e[0][0])
+            if e[0][0] == x:
+                next_vertices.append((id, e[0]))
+                #print("e", next_vertices)
+            elif e[0][1] == x:
+                next_vertices.append((id, e[0]))
+                
         if next_vertices:
+            #duyệt qua các phần tử trong next_vertices
             for next_step in next_vertices:
                 next_edge, next_vertex = next_step
+                #print("next_edge", next_edge)
+                #print("next_vertex", next_vertex)
                 if next_vertex not in visited:
+                    #print("not visited", next_vertex)
                     visited.append(next_vertex)
                     loop(remove_edge(next_edge, (x, next_vertex), g), next_vertex)
     
     loop(graph, x)
     return len(visited)
-def next_vertex(g, x): #next_vertex(pud, start_ele)
-    acc = []
-    for i in g:
-        if isinstance(i, tuple) and i[0] == 'transistor':
-            id, (e1, e2) = i[1]
-            if e1 == x:
-                acc.append((id, e2))
-            elif e2 == x:
-                acc.append((id, e1))
-    return acc
-
 def path_start(pud, pdn):
     # Vertices to begin
     pud_point = [a for a in pud]
     #Chứa các điểm kết nối trong pud
     vertices_pud = list(set([item for transistor in pud for item in transistor.points]))
-    #print("start", vertices_pud)
+    print("start", vertices_pud)
     pdn_point = [a for a in pud]
     #Chứa các điểm kết nối trong pdn
     vertices_pdn = list(set([item for transistor in pdn for item in transistor.points]))
@@ -223,27 +239,63 @@ def euler_path(pud, pdn):
     return path1, edge1, path2, edge2
 
 def any_path(g, vertex): #any_path(pud, start_ele)
-    # Tìm đỉnh tiếp theo cho start_ele
-    next_vertices = next_vertex(g, vertex)
+    #tìm đường đi tiếp theo cho start_ele
+    next_vertices = next_vertex(g, vertex) #next_vertex trả về cạnh nối với start_ele
     if not next_vertices:
         return [], []
     next_ele = 0
-    if len(set([v for _, v in next_vertices])) <= 1:
+    #Nếu chỉ có 1 cạnh để đi tiếp => chọn cạnh đó
+    if len(set([item for sublist in map(lambda x: x[1], next_vertices) for item in sublist])) <= 1:
+        #print("chi co 1 canh")
         next_ele = 0
     else:
-        for a, _ in next_vertices:
-            for i in range(len(next_vertices)):
-                if len(set([v for _, v in next_vertices])) <= 1 or \
-                        len(set([v for _, v in next_vertex(remove_edge(a, (vertex, next_vertices[i][1]), g), vertex)])) <= 1:
-                    next_ele = i
-                    break
-    
-    stack = next_vertices[next_ele][1]
-    id = next_vertices[next_ele][0]
-    p2 = stack[1]
-    
-    euler1, euler2 = any_path(remove_edge(id, (vertex, p2), g), p2)
-    return [(id, [vertex] + stack)] + euler1, [id] + euler2
+        #print("nhieu hon 1 canh")
+        #i là chỉ số, a là phẩn tử tương ứng với chỉ số
+        for i, a in enumerate(next_vertices):
+            #print(a[0])
+            #print([vertex] + [a[1][0]])
+            #print(vertex)
+            #result = remove_edge(a[0], [vertex] + [a[1][0]], g)
+            #for transistor in result:
+                #print(f"Transistor ID: {transistor.id}, Points: {transistor.points[0]}")
+            #reach: khoảng cách từ điểm bắt đầu đến các đỉnh khác trong đồ thị - số lượng đỉnh từ điểm bắt đầu
+            #reach(remove_edge): Sau khi loại bỏ cạnh
+            #print("reach", reach(remove_edge(a[0], [vertex] + [a[1][0]], g), vertex))
+            #print((reach(g, vertex)))
+            
+            #Chọn đỉnh có số lượng đỉnh ít nhất
+            if all(reach(g, vertex) <= reach(remove_edge(a[0], [vertex] + [a[1][0]], g), vertex) for _ in range(i + 1)):
+                next_ele = i
+                break
+    stack = next_vertices[next_ele]
+    #print('stack', stack)
+    id_ = stack[0]
+    #print('id_', id_)
+    p2 = stack[1][0]
+    #print('points', p2)
+    result = remove_edge(id_, [vertex] + [p2], g)
+    #for transistor in result:
+        #print(f"Transistor ID: {transistor.id}, Points: {transistor.points[0]}")
+    #euler1: đường đi từ điểm bắt đầu đến đỉnh tiếp theo
+    #euler2: id của đỉnh tiếp theo
+    euler1, euler2 = any_path(remove_edge(id_, [vertex] + [p2], g), p2)
+    #print('euler1', euler1)
+    #print('euler2', euler2)
+    return [(id_, [vertex] + [p2])] + euler1, [id_] + euler2
+    #return vertex
+def remove_edge(id, points, g): #(tên đỉnh, điểm kết nối, pud/pdn) (A, 'P1, P2', pud)
+    g_new = remove_edge_2(id, points, g)  # Gọi hàm remove_edge_2 để loại bỏ cạnh từ đồ thị g   
+    return remove_edge_2(id, reverse_pair(points), g_new)  # Áp dụng hàm remove_edge_2 lần nữa sau khi đảo ngược cặp points
+def remove_edge_2(id_, points_, g):
+    result = []
+    for a in g:
+        if a.id != id_:
+            if a.points[0] != points_:
+                result.append(a)
+    return result
+def reverse_pair(points):
+    if isinstance(points, tuple):  # Kiểm tra xem points có phải là một cặp không
+        return (points[1], points[0])  
 # Testing the function
 pud = [Transistor('A', [('P2', 'Vdd')]),
        Transistor('D', [('P1', 'Vdd')]),
@@ -257,12 +309,27 @@ pdn = [Transistor('A', [('Out', 'P3')]),
        Transistor('B', [('Out', 'P4')]),
        Transistor('C', [('P4', 'Vss')])]
 
-#pud_result, pdn_result = points(pud, pdn)
+pud_result, pdn_result = points(pud, pdn)
 #nodes_pud, nodes_pdn = nodes(pud, pdn)
 #a, b = path_start(pud, pdn)
 #print("S", a)
 path1, edge1, path2, edge2 = euler_path(pud, pdn)
-#print(path1, edge1, path2, edge2)
-start_test = ('P2', 'Vdd')
-next_test = next_vertex(pud, start_test)
-print("S", next_test)
+print('canh pud', path1)
+print('dinh pud', edge1)
+print('canh pdn', path2)
+print('dinh pdn', edge2)
+#start_ele_test = ('P3')
+#next_vertices = [('A', 'Out'), ('D', 'Vss'), ('E', 'Vss')]
+#next_test = next_vertex(pdn, start_ele_test)
+#print("canh noi voi P3", next_test)
+#path, edges = any_path(pdn, start_ele_test)
+#print("path", path) #danh sách các đỉnh trên đường đi
+#print("edge", edges) #danh sách các cạnh trên đường đi
+
+#result = remove_edge_2('A', ('P3', 'Vss'), pdn)
+#for transistor in result:
+    #print(f"Transistor ID: {transistor.id}, Points: {transistor.points[0]}")
+    
+#result2 = reverse_pair(('P3', 'Vss'))
+#print(result2)
+
