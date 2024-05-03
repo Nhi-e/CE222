@@ -19,34 +19,29 @@ pud = [
     Transistor('A', ('P1', 'Vdd')),
     Transistor('B', ('P1', 'Vdd')),
     Transistor('C', ('Out', 'P1')),
-    Transistor('E', ('P2', 'P1')),
-    Transistor('D', ('Out', 'P2')),
+    Transistor('D', ('P2', 'P1')),
+    Transistor('E', ('Out', 'P2')),
 ]
 
 pdn = [
     Transistor('A', ('Out', 'P3')),
     Transistor('B', ('P3', 'Vss')),
     Transistor('C', ('Out', 'P4')),
-    Transistor('E', ('P4', 'Vss')),
     Transistor('D', ('P4', 'Vss')),
+    Transistor('E', ('P4', 'Vss')),
 ]
 def points(pud, pdn): #xác định các vị trí VDD, GND, VOUT
     ids = [transistor.id for transistor in pud]
     #lấy danh sách các POINTS của đỉnh
     pud_names = []
-    # Duyệt qua từng transistor trong danh sách pud
     for transistor in pud:
-    # Duyệt qua từng điểm trong transistor
         for point in transistor.points:
-        # Nếu điểm chưa có trong danh sách pud_names, thêm vào danh sách và giữ nguyên thứ tự
             if point not in pud_names:
                 pud_names.append(point)
+                
     pdn_names = []
-    # Duyệt qua từng transistor trong danh sách pud
     for transistor in pdn:
-    # Duyệt qua từng điểm trong transistor
         for point in transistor.points:
-        # Nếu điểm chưa có trong danh sách pud_names, thêm vào danh sách và giữ nguyên thứ tự
             if point not in pdn_names:
                 pdn_names.append(point)
     #print(pud_names)
@@ -56,12 +51,13 @@ def points(pud, pdn): #xác định các vị trí VDD, GND, VOUT
         links = []
         for pud_transistor in pud:
             if point in pud_transistor.points:
-                #print(point, pud_transistor.points[0])
                 if point == pud_transistor.points[0]:
                     links.append((pud_transistor.id, 'S'))
                 else:
                     links.append((pud_transistor.id, 'D'))
+        links.reverse()
         points_pud.append((point, links))
+        #points_pud.reverse()
         #print("points_pud: \n" , points_pud )
     for point in pdn_names:
         links = []
@@ -72,6 +68,7 @@ def points(pud, pdn): #xác định các vị trí VDD, GND, VOUT
                     links.append((pdn_transistor.id, 'S'))
                 else:
                     links.append((pdn_transistor.id, 'D'))
+        links.reverse()
         points_pdn.append((point, links))
         #print("points_pdn: \n" , points_pdn )
 
@@ -253,7 +250,7 @@ def any_path(g, vertex): #any_path(pud, start_ele)
     next_vertices = []
     #print(vertex)
     next_vertices = next_vertex(g, vertex) #next_vertex trả về cạnh nối với start_ele
-    print(next_vertices)
+    #print(next_vertices)
     if not next_vertices:
         return [], []
     next_ele = 0
@@ -284,7 +281,7 @@ def any_path(g, vertex): #any_path(pud, start_ele)
     #euler2: id của đỉnh tiếp theo2
     euler1, euler2 = any_path(remove_edge(id_, [vertex] + [p2], g), p2)
     #print('euler2', euler2)
-    #print('euler2', euler2)
+    #print('euler1', euler1)
     #print([(id_, [vertex] + [p2])] + euler1) #Danh sách các cạnh đã đi qua
     #print([id_] + euler2) #chứa ID các cạnh đã đi qua
     return [(id_, [vertex] + [p2])] + euler1, [id_] + euler2
@@ -336,17 +333,14 @@ def polarity(pud, pdn):
 
 # hàm xác định thứ tự các cực (S và D) của một transitor 
 def polarity_euler(euler1, g):
+    #print('euler', euler1)
     polarity_list = []
-    for transistor in euler1:
-        id, pola = transistor
-        pola = sorted(pola)   # su dung ham nay de tu dong sap xep cac phan tu trong mang ma khong can quan tam vi tri
-        # Tim id cua transistor co trong do thi
-        transistor =  filter_transistor(id, g)
-        pola_g = sorted(transistor.points) 
-
-        if pola == pola_g:
+    for transis in euler1:
+        id, pola = transis
+        trans =  filter_transistor(id, g)
+        pola_g = trans.points
+        if pola[0] == pola_g[0] and pola[1] == pola_g[1]:
             polarity_list.append([id, ordem])
-
         else:
             polarity_list.append([id, [ordem[1], ordem[0]]])
     return polarity_list
@@ -354,7 +348,6 @@ def polarity_euler(euler1, g):
 def line_hor(pud, pdn):
     points_pud, points_pdn = points(pud, pdn)
     line_pud = len(points_pud)
-    
     line_pdn = len(points_pdn)
     y2 = 0.3 * size_janela.col / line_pud
     y3 = 0.3 * size_janela.col / line_pdn
@@ -363,21 +356,25 @@ def line_hor(pud, pdn):
     
     line_hor_pud = []
     line_hor_pdn = []
-    for i, a in enumerate(points_pud):
+    for a, i in zip(points_pud, range(1, len(points_pud) + 1)):
         id = a[0]
-        
-        if "Vdd" in id or "Out" in id:
+        color = "black"
+        if id == "Vdd" or id == "Vss":
             color = "blue"
+        elif id == "Out":
+            color = "brown"
         else:
-            color = "yellow"
+            color = "blue"
         line_hor_pud.append([id, line(x0, i * y2, x1, i * y2, color)])
         #print(a[0], color)
-    for i, a in enumerate(points_pdn):
+    for a, i in zip(points_pdn, range(1, len(points_pdn) + 1)):
         id = a[0]
-        if "Vss" in id or "Out" in id:
+        if id == "Vdd" or id == "Vss":
             color = "blue"
-        else:
+        elif id == "Out":
             color = "green"
+        else:
+            color = "blue"        
         line_hor_pdn.append([id, line(x0, size_janela.col - i * y3, x1, size_janela.col - i * y3, color)])
     return line_hor_pud, line_hor_pdn
 
@@ -390,8 +387,9 @@ def find_polarity (id , polarity):
 
 def line_ver(pud, pdn): #tạo các đường thẳng dọc
     path1, edge1, path2, edge2 = euler_path(pud, pdn)
-    #Phân cực S và D
-    polarity_pud, polarity_pdn = polarity(pud, pdn)
+    #print(path1)
+    #print(path2)
+    polarity_pud, polarity_pdn = polarity(pud, pdn)    
     qnt_con = len(edge1)
     #print(qnt_con)
     #Tìm các cạnh giống nhau, thường rỗng
@@ -401,25 +399,17 @@ def line_ver(pud, pdn): #tạo các đường thẳng dọc
     y1 = 0.4 * size_janela.col          #240
     y2 = 0.6 * size_janela.col          #360
     y3 = 0.85 * size_janela.col         #510
-    #print(y1)
-    lines_pud = []
-    lines_pdn = []
+    return (lines_ver(polarity_pud, edge1, equal, x, y0, y1, y0),
+            lines_ver(polarity_pdn, edge2, equal, x, y2, y3, y1))
 
-    for i, id in enumerate(edge1):
-        #print(id)
-        if assc(id, equal): # dieu kien kiem tra xem co transistor nao giong nhau o pud va pdn khong                      
-            lines_pud.append([id, find_polarity(id,polarity_pud), line(i * x, y0, i * x, y1, "red")])
-            #print(lines_pud[2].y0)
+def lines_ver(polarity, euler, eq, x, y0, y1, yc):
+    result = []
+    for id, i in zip(euler, range(1, len(euler) + 1)):
+        if id in eq:
+            result.append([id, next((pair[1] for pair in polarity if pair[0] == id), None), line(i * x, yc, i * x, y1, "red")])
         else:
-            lines_pud.append([id, find_polarity(id,polarity_pud), line(i * x, y0, i * x, y1, "red")])
-    for i, id in enumerate(edge1):
-        #print(id)
-        if assc(id, equal):
-            lines_pdn.append([id, find_polarity(id,polarity_pud), line(i * x, y2, i * x, y3, "red")])
-        else:
-            lines_pdn.append([id, find_polarity(id,polarity_pud), line(i * x, y2, i * x, y3, "red")])
-    #print(lines_pud)
-    return lines_pud, lines_pdn
+            result.append([id, next((pair[1] for pair in polarity if pair[0] == id), None), line(i * x, y0, i * x, y1, "red")])
+    return result
 
 def equal_pos(edge1, edge2): #tìm đỉnh chung của euler path pud và pdn
     result = []
@@ -448,39 +438,31 @@ fig, ax = plt.subplots()
 def draw_stick_basic(pud, pdn):
     #hor: ngang, ver: dọc
     line_hor_pud, line_hor_pdn= line_hor(pud, pdn) #lines
-    #print(line_pud)
+    #x0,y0,x1,y1
+    #print(line_hor_pdn[2][1].x0, line_hor_pdn[2][1].y0, line_hor_pdn[2][1].x1, line_hor_pdn[2][1].y1, line_hor_pdn[2][1].color )
     points_pud, points_pdn = points(pud, pdn) #transistor 
-    #for i in points_pud:
-        #print(i[1])
     euler1, euler2, euler3, euler4 = euler_path(pud, pdn) #euler
-    #print(euler2)
     line_id_pud, line_id_pdn = line_ver(pud, pdn) #line
-    #line_out = line_vout() #lines
+    #print(line_id_pdn)
+    #print(line_id_pud)
     line_out_ver2 = line_vout_ver2() #lines
+    
     qnt_con = len(euler2)
-    #print(qnt_con)
+    
     eq = equal_pos(euler2, euler4) #euler
     #print('eq',eq)
     x = 0.8 * (size_janela.lin) / (2 * qnt_con)
     vout_p_value = next((item[1] for item in line_hor_pud if item[0] == 'Out'), None)
-    #print(vout_p_value)
-    #for item in line_hor_pud:
-        #print(item[0])
-        #if item[0] == 'Out':
-            #print(item[0])
-    
-    # # vout_n_value = next((item[1] for item in line_pdn if item[0] == 'Vout'), None)
-    # # y_n_type = line.y0(vout_n_value)
-    #y_p_type = line.y0([item[1] for item in line_pud if item[0] == Vout][0])
     y_p_type = vout_p_value.y0
     #print(y_p_type)
-    # #y_n_type = line.y0([item[1] for item in line_pdn if item[0] == Vout][0]) #lines/transistor
+    vout_n_value = next((item[1] for item in line_hor_pdn if item[0] == 'Out'), None)
+    y_n_type = vout_n_value.y0
+    #print(y_n_type)
+    draw_id(line_id_pud, eq, True)
+    draw_id(line_id_pdn, eq, False)
 
-    #draw_id(line_id_pud, eq, True)
-    #draw_id(line_id_pdn, eq, False)
-
-    #draw_other_id(line_hor_pud, euler2, points_pud, line_id_pud, x, y_p_type)
-    # # draw_other_id(line_pdn, euler4, points_pdn, line_id_pdn, x, y_n_type, False)
+    draw_other_id(line_hor_pud, euler2, points_pud, line_id_pud, x, y_p_type)
+    draw_other_id(line_hor_pdn, euler4, points_pdn, line_id_pdn, x, y_n_type, False)
     
     for i in line_out_ver2:
         if isinstance(i, line): #lines
@@ -504,8 +486,8 @@ def draw_id(line_id, eq, top):
             x1 = i[2].x1
             y1 = i[2].y1
             color = i[2].color
-            #print('line', x0, x1,y0,y1)
-            plt.plot([x0, x1], [y0, y1], color='red', linewidth=3)
+            #print('line', x0, y0, x1,y1)
+            plt.plot([x1, x1], [y0, y1], color='red', linewidth=3)
             if top or id not in eq:
                 plt.text(x0, y0 if top else y1, str(id), color=color)
 
@@ -518,38 +500,46 @@ def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
         y0 = a[1].y0
         y1 = a[1].y1
         color = a[1].color
-        #print(id)
-        #x0, y0, x1, y1, color = line
-        if id in [Vdd, Vss, Out]:
+
+        if id == "Vdd" or id == "Vss" or id == "Out":
             plt.plot([x0, x1], [y0, y1], color=color, linewidth=3, linestyle='-')
-        #chứa các điểm trong pud có link_point = id
-        #nos(id, points)
-        nos = [i for i in points_pud if i[0] == id and i[1]]
-        print(nos)
+            #print([y0, y1])
+        #else:
+        nos = []
+            #nos = [i[1] for i in points_pud if i[0] == id and i[1]]
         len_nos = 0
-        #for i in nos:     
-            #len_nos = (len(i[1]))
-            #print(i[1])
-        #print(len_nos)
-        #Nếu 2 nút nối cùng với 1 ID   
-        if len_nos == 2:
-            node1 = nos[0][1][0][0]
-            node1_p = nos[0][1][0][1] #vị trí của node1
-            node2 = nos[0][1][1][0]
-            node2_p = nos[0][1][1][1]
-            #print(node1, node1_p, node2, node2_p)
-            #index_node1 = []
-            index_node1 = euler2.index(node1) if node1 in euler2 else -1
-            #print(index_node1)
-            index_node2 = euler2.index(node2) if node2 in euler2 else -1
+        nos = [i[1] for i in points_pud if i[0] == id]
+            #print(nos)
+            #node, aux = nos[0], nos[0]
+        if (len(nos) ==5 ):
+                node1 = []
+                node2 = []
+                node3 = []
+                temp1 = nos[:-1]
+                temp2 = nos[1:]
+                if(len(temp1) == 1):
+                    node1 =  temp1[0][0]
+                if(len(temp1) == 2 or len(temp1) == 3):
+                    for temp3 in temp1:
+                        node1.extend(temp3[0])
+                if(len(temp2) == 1):
+                    node2 =  temp2[0][0]
+                if(len(temp2) == 2 or len(temp2) == 3):
+                    for temp3 in temp2:
+                        node2.extend(temp3[0])
+            #print(node1)
+                #for i in node1:
+                    #index_node1 = euler2.index(i) if node1 in euler2 else -1
+                #print(node1, index_node1)
+                    #index_node2 = euler2.index(node2) if node2 in euler2 else -1
             #print(index_node2)
             #index_node2 = euler2.index(node2)
-            line1 = next((line for line in line_id if line[0] == node1), None)
+                    #line1 = next((line for line in line_id if line[0] == node1), None)
             #line1 = line_id[0][node1] #line_id = line_id_pud
             #for line in line_id:
                 #print(line[0])
             #print(line1[0][2])
-            line2 = next((line for line in line_id if line[0] == node2), None)
+                    #line2 = next((line for line in line_id if line[0] == node2), None)
             #for line in line_id:
                 #print(line[0])
             #print(line1)
@@ -561,16 +551,20 @@ def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
             #y02 = line2[2].y0
             #y12 = line2[2].y1
             #if (not seguido(index_node1, index_node2) or (seguido(index_node1, index_node2) and not ligado(line1, node1_p, line2, node2_p, index_node1, index_node2)) or id == Vdd or id == Vss):
-                #plt.plot([x1, x1, x2, x2], [y_p_type, line.y0(line_pud[id][1]), line.y0(line_pud[id][1]), y_p_type], color=color, linewidth=2, linestyle='-')
+                #plt.plot([x1, x1, x2, x2], [y_p_type, (line_pud[1][1].y0),  (line_pud[1][1].y0), y_p_type], color=color, linewidth=2, linestyle='-')
                 #plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
                 #plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
     
-        #if id == Vout:
-            #nos = [i for i in points_pud if i.link_point == id and i.link_position]
+        #if id == Out:
+            #for i in points_pud:
+                #print(i[1])
+            #nos = [i[1] for i in points_pud if i[0] == id ]
             #for j in nos:
-                #node, node_p = j
-                #line = line_id[node]
-                #x1, y01, _, y11, _ = line
+                #for item in line_id:
+                    #if item[0] == j:
+                        #pol = item[2]
+                        #x1 = item[3]
+                        #y1 = item[5]
                 #plt.plot([x1, x1], [y_p_type, 0.5 * SizeWindow(size_janela)], color='blue', linewidth=2, linestyle='-')
                 #plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
 def seguido(index_node1, index_node2):
@@ -600,16 +594,16 @@ pud = [
     Transistor('A', ('P1', 'Vdd')),
     Transistor('B', ('P1', 'Vdd')),
     Transistor('C', ('Out', 'P1')),
-    Transistor('E', ('P2', 'P1')),
-    Transistor('D', ('Out', 'P2')),
+    Transistor('D', ('P2', 'P1')),
+    Transistor('E', ('Out', 'P2')),
 ]
 
 pdn = [
     Transistor('A', ('Out', 'P3')),
     Transistor('B', ('P3', 'Vss')),
     Transistor('C', ('Out', 'P4')),
-    Transistor('E', ('P4', 'Vss')),
     Transistor('D', ('P4', 'Vss')),
+    Transistor('E', ('P4', 'Vss')),
 ]
 
 pud_result, pdn_result = points(pud, pdn)
@@ -626,7 +620,7 @@ path1, edge1, path2, edge2 = euler_path(pud, pdn)
 #print(line_pdn)
 #plt.show(draw_stick_basic(pud,pdn))
 
-#draw_stick_basic(pud, pdn)
+draw_stick_basic(pud, pdn)
 #plt.show()
 #result = equal_pos(edge1, edge2)
 #print(result)
