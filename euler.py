@@ -506,54 +506,37 @@ def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
             #print([y0, y1])
         #else:
         nos = []
+        node1 = []
+        node1_p = []
+        node2 = []
+        node2_p = []
             #nos = [i[1] for i in points_pud if i[0] == id and i[1]]
         len_nos = 0
         nos = [i[1] for i in points_pud if i[0] == id]
-            #print(nos)
-            #node, aux = nos[0], nos[0]
-        if (len(nos) ==5 ):
-                node1 = []
-                node2 = []
-                node3 = []
-                temp1 = nos[:-1]
-                temp2 = nos[1:]
-                if(len(temp1) == 1):
-                    node1 =  temp1[0][0]
-                if(len(temp1) == 2 or len(temp1) == 3):
-                    for temp3 in temp1:
-                        node1.extend(temp3[0])
-                if(len(temp2) == 1):
-                    node2 =  temp2[0][0]
-                if(len(temp2) == 2 or len(temp2) == 3):
-                    for temp3 in temp2:
-                        node2.extend(temp3[0])
-            #print(node1)
-                #for i in node1:
-                    #index_node1 = euler2.index(i) if node1 in euler2 else -1
-                #print(node1, index_node1)
-                    #index_node2 = euler2.index(node2) if node2 in euler2 else -1
-            #print(index_node2)
-            #index_node2 = euler2.index(node2)
-                    #line1 = next((line for line in line_id if line[0] == node1), None)
-            #line1 = line_id[0][node1] #line_id = line_id_pud
-            #for line in line_id:
-                #print(line[0])
-            #print(line1[0][2])
-                    #line2 = next((line for line in line_id if line[0] == node2), None)
-            #for line in line_id:
-                #print(line[0])
-            #print(line1)
-            #x1 = line1[2].x0
-            #y01 = line1[2].y0
-            #y11 = line1[2].y1
-
-            #x2 = line2[2].x0
-            #y02 = line2[2].y0
-            #y12 = line2[2].y1
-            #if (not seguido(index_node1, index_node2) or (seguido(index_node1, index_node2) and not ligado(line1, node1_p, line2, node2_p, index_node1, index_node2)) or id == Vdd or id == Vss):
-                #plt.plot([x1, x1, x2, x2], [y_p_type, (line_pud[1][1].y0),  (line_pud[1][1].y0), y_p_type], color=color, linewidth=2, linestyle='-')
-                #plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
-                #plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
+        for node in nos:           
+            temp1 = node[:-1]
+            temp3 = node[1:]
+            for temp2 in temp1:
+                node1 = temp2[0]
+                node1_p = temp2[1]
+                index_node1 = euler2.index(node1) if node1 in euler2 else -1
+                line1 = next((line for line in line_id if line[0] == node1), None)
+                x1 = line1[2].x0
+                y01 = line1[2].y0
+                y11 = line1[2].y1
+            for temp2 in temp3:
+                node2 = temp2[0]
+                node2_p = temp2[1]
+                index_node2 = euler2.index(node2) if node2 in euler2 else -1
+                line2 = next((line for line in line_id if line[0] == node2), None)
+                x2 = line2[2].x0
+                y02 = line2[2].y0
+                y12 = line2[2].y1
+                print(x2)
+            if (not seguido(index_node1, index_node2) or (seguido(index_node1, index_node2) and not ligado(line1, node1_p, line2, node2_p, index_node1, index_node2)) or id == Vdd or id == Vss):
+                plt.plot([x1, x1, x2, x2], [y_p_type, (line_pud[1][1].y0),  (line_pud[1][1].y0), y_p_type], color=color, linewidth=2, linestyle='-')
+                plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
+                plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
     
         #if id == Out:
             #for i in points_pud:
