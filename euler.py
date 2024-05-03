@@ -1,6 +1,7 @@
 import math
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import re
 ordem = ('S', 'D')
 Vdd = 'Vdd'
 Vss = 'Vss'
@@ -503,27 +504,48 @@ def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
 
         if id == "Vdd" or id == "Vss" or id == "Out":
             plt.plot([x0, x1], [y0, y1], color=color, linewidth=3, linestyle='-')
-            #print([y0, y1])
-        #else:
-        nos = []
-        node1 = []
-        node1_p = []
+        node1 = ''
+        node1_temp = []
+        node2_temp = []
+        node3 = []
         node2 = []
-        node2_p = []
+        node4 = []
             #nos = [i[1] for i in points_pud if i[0] == id and i[1]]
-        len_nos = 0
         nos = [i[1] for i in points_pud if i[0] == id]
+        nos_without_brackets = [re.sub(r'[\[\]]', '', str(sublist)) for sublist in nos]
+        for item in nos_without_brackets:
+            item = item.split(', ')
+            if len(item) == 4:  # Nếu có đúng 2 cặp giống nhau
+                node1, node2 = item[0].split("'")[1], item[1].split("'")[1]
+                node3, node4 = item[2].split("'")[1], item[3].split("'")[1]
+                node1_temp=node1
+            else:  # Nếu có nhiều hơn 2 cặp giống nhau
+                for i in range(0, len(item) - 3, 2):
+                    node1, node2 = item[i].split("'")[1], item[i+1].split("'")[1]
+                    node3, node4 = item[i+2].split("'")[1], item[i+3].split("'")[1]
+                    node1_temp=(node1)
+                    #print("node1 =", node1, "node2 =", node2, "node3 =", node3, "node4 =", node4)
+            print(node1)   
+            
         for node in nos:           
             temp1 = node[:-1]
             temp3 = node[1:]
+            pol = None
+            pol2 = None
+
             for temp2 in temp1:
-                node1 = temp2[0]
+                node1= temp2[0]
                 node1_p = temp2[1]
                 index_node1 = euler2.index(node1) if node1 in euler2 else -1
                 line1 = next((line for line in line_id if line[0] == node1), None)
-                x1 = line1[2].x0
-                y01 = line1[2].y0
-                y11 = line1[2].y1
+                #x1 = line1[2].x0
+                #y01 = line1[2].y0
+                #y11 = line1[2].y1
+                for item in line_id:
+                    if item[0] == node1:
+                        pol = item[2]
+                #print(node1, len(node1))
+
             for temp2 in temp3:
                 node2 = temp2[0]
                 node2_p = temp2[1]
@@ -532,24 +554,34 @@ def draw_other_id(line_pud, euler2, points_pud, line_id, x, y_p_type, pud=True):
                 x2 = line2[2].x0
                 y02 = line2[2].y0
                 y12 = line2[2].y1
-                print(x2)
-            if (not seguido(index_node1, index_node2) or (seguido(index_node1, index_node2) and not ligado(line1, node1_p, line2, node2_p, index_node1, index_node2)) or id == Vdd or id == Vss):
-                plt.plot([x1, x1, x2, x2], [y_p_type, (line_pud[1][1].y0),  (line_pud[1][1].y0), y_p_type], color=color, linewidth=2, linestyle='-')
-                plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
-                plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
+                for item in line_id:
+                    if item[0] == node2:
+                        pol2 = item[2]
+            
+
+            if pol is not None and pol2 is not None:
+                #print(pol)
+                if not (seguido(index_node1, index_node2) and ligado(pol, node1_p, pol2, node2_p, index_node1, index_node2)):
+                    #print(id)
+                    if id == 'Vdd' or id == 'Vss':
+                        plt.plot([x1, x1, x2, x2], [y_p_type, (line_pud[1][1].y0),  (line_pud[1][1].y0), y_p_type], color=color, linewidth=2, linestyle='-')
+                        plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
+                        plt.plot(x2, y_p_type, 'o', color='black', markersize=6)
     
-        #if id == Out:
-            #for i in points_pud:
-                #print(i[1])
-            #nos = [i[1] for i in points_pud if i[0] == id ]
-            #for j in nos:
-                #for item in line_id:
-                    #if item[0] == j:
-                        #pol = item[2]
-                        #x1 = item[3]
-                        #y1 = item[5]
+                    if id == "Out":
+                        for i in points_pud:
+                            nos = [i[1] for i in points_pud if i[0] == id ]
+                            #for node in nos:
+                                #print(node)
+                        for j in nos:
+                            for item in line_id:
+                                if item[0] == j:
+                                    pol = item[2]
+                                    x1 = item[3]
+                                    y1 = item[5]
+                        #print(x1)
                 #plt.plot([x1, x1], [y_p_type, 0.5 * SizeWindow(size_janela)], color='blue', linewidth=2, linestyle='-')
-                #plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
+                        plt.plot(x1, y_p_type, 'o', color='black', markersize=6)
 def seguido(index_node1, index_node2):
     #kiểm tra 2 đỉnh kể nhau (chỉ số cách nhau 1)
     return (index_node1 + 1 == index_node2) or (index_node1 - 1 == index_node2)
